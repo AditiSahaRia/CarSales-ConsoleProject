@@ -25,20 +25,40 @@ public class SignIn {
             System.out.println("Enter your password: ");
             password = scanner.nextLine();
 
-            String sqlQuery = "SELECT email, password FROM member";
-            Statement statement = connection.createStatement();
-            ResultSet resultSet = statement.executeQuery(sqlQuery);
+            String sqlQuery = "SELECT COUNT(*) FROM member WHERE email = ? AND password = ?";
+            PreparedStatement statement = connection.prepareStatement(sqlQuery);
+            statement.setString(1, email);
+            statement.setString(2, password);
+            ResultSet resultSet = statement.executeQuery();
 
-            if (resultSet != null) {
-                while (resultSet.next()) {
-                    String checkEmail = resultSet.getString("email");
-                    String checkPassword = resultSet.getString("password");
-                    if (email.equals(checkEmail) && password.equals(checkPassword)) {
-                        System.out.println("credentials.SignIn Successful");
-                        flag = true;
+            if (resultSet.next()) {
+                int count = resultSet.getInt(1);
+                if (count==1) {
+                    System.out.println("sign in Successful");
+                    flag = true;
+                } else {
+                    System.out.println("Wrong credentials!");
+                    while (true) {
+                        System.out.println("To try again enter 1\n" +
+                                "Forgot Password? To reset enter 2\n" +
+                                "Not Registered? To sign up enter 3");
+                        int choice = scanner.nextInt();
+                        if (choice == 1) {
+                            new SignIn();
+                            return;
+                        } else if (choice == 2) {
+                            boolean done = new ResetPassword().isReset();
+                            if (done) {
+                                new SignIn();
+                                return;
+                            }
+                        } else {
+                            new SignUp();
+                            return;
+                        }
                     }
                 }
-            } else System.out.println("Wrong credentials!");
+            }
         } catch (SQLException exception) {
             exception.printStackTrace();
         }

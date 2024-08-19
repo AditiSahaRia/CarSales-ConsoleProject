@@ -26,87 +26,75 @@ public class SignUp {
             name = scanner.nextLine();
             System.out.print("Enter your email: ");
             email = scanner.nextLine();
-            while (true) {
-                boolean valid = checkValidEmail(email);
-                if (valid) {
-                    boolean emailExists = checkIfEmailExists(email);
-                    if (!emailExists) break;
-                    System.out.println("This Email already Exists. Kindly login or enter a new Email");
-                    System.out.println("Press 1 for credentials.SignIn. \nPress 2 for continuing registration with a new Email");
-                    System.out.print("Enter: ");
-                    int num = scanner.nextInt();
-                    if (num==1) {
-                        System.out.println("Sign in page");
-                        new SignIn();
-                        return;
-                    }
-                }
-                System.out.println("Enter a valid email: \nExample: adt@g.com\nHere: ");
-                email = scanner.nextLine();
-            }
-            System.out.println("Enter your password: \n" +
-                    "Password must contain at least one uppercase " +
-                    "letter, one lowercase letter, one number, and one special character.");
-            password = scanner.nextLine();
-            while (true) {
-                boolean result = checkPassword(password);
-                if (result) break;
-                System.out.println("Password must contain at least one uppercase " +
-                        "letter, one lowercase letter, one number, and one special character.");
+            if (emailCheck()) {
+                System.out.println("Enter your password: \n" +
+                        "Password must contain at least one uppercase " +
+                        "letter, one lowercase letter, one number, one special " +
+                        "character and length must be at least 8.");
                 password = scanner.nextLine();
+                password = new CheckPassword().checkPassword(password);
+                System.out.print("Enter your photo name: ");
+                photoName = scanner.nextLine();
+                System.out.print("Enter your mobile: ");
+                mobile = scanner.nextInt();
+
+                String sqlQuery = "INSERT INTO member(name, email, password, photo, mobile) VALUES (?, ?, ?, ?, ?)";
+                PreparedStatement preparedStatement = connection.prepareStatement(sqlQuery);
+
+                preparedStatement.setString(1, name);
+                preparedStatement.setString(2, email);
+                preparedStatement.setString(3, password);
+                preparedStatement.setString(4, photoName);
+                preparedStatement.setInt(5, mobile);
+
+                preparedStatement.execute();
+                System.out.println("Registration Successful");
+                isSuccess = true;
             }
-            System.out.print("Enter your photo name: ");
-            photoName = scanner.nextLine();
-            System.out.print("Enter your mobile: ");
-            mobile = scanner.nextInt();
-
-            String sqlQuery = "INSERT INTO member(name, email, password, photo, mobile) VALUES (?, ?, ?, ?, ?)";
-            PreparedStatement preparedStatement = connection.prepareStatement(sqlQuery);
-
-            preparedStatement.setString(1, name);
-            preparedStatement.setString(2, email);
-            preparedStatement.setString(3, password);
-            preparedStatement.setString(4, photoName);
-            preparedStatement.setInt(5, mobile);
-
-            preparedStatement.execute();
-            System.out.println("Registration Successful");
-            isSuccess = true;
         } catch (SQLException exception) {
             exception.printStackTrace();
         }
     }
 
+    private boolean emailCheck() throws SQLException {
+        while (true) {
+            boolean valid = checkValidEmail(email);
+            if (valid) {
+                boolean emailExists = checkIfEmailExists(email);
+                if (!emailExists) return true;
+                System.out.println("This Email already Exists. Kindly login or enter a new Email");
+                System.out.println("Press 1 for SignIn. \nPress 2 for continuing registration with a new Email");
+                System.out.print("Enter: ");
+                int num = scanner.nextInt();
+                if (num==1) {
+                    System.out.println("Sign in page");
+                    new SignIn();
+                    return false;
+                }
+            }
+            System.out.println("Enter a valid email: \nExample: adt@g.com\nHere: ");
+            email = scanner.nextLine();
+        }
+    }
     private boolean checkValidEmail(String email) {
         return Pattern.compile("@").matcher(email).find();
     }
 
     private boolean checkIfEmailExists(String email) {
-        String query = "SELECT email FROM member";
+        String query = "SELECT COUNT(*) FROM member WHERE email = ?";
         try {
-            Statement statement = connection.createStatement();
-            ResultSet resultSet = statement.executeQuery(query);
+            PreparedStatement statement = connection.prepareStatement(query);
+            statement.setString(1, email);
+            ResultSet resultSet = statement.executeQuery();
 
-            if (resultSet != null) {
-                while (resultSet.next()) {
-                    String existingEmail = resultSet.getString("email");
-                    if (email.equals(existingEmail)) return true;
-                }
+            if (resultSet.next()) {
+                int count = resultSet.getInt(1);
+                if (count==1) return true;
             }
         } catch (SQLException e) {
             e.printStackTrace();
         }
         return false;
-    }
-
-    private boolean checkPassword(String password) {
-        boolean length = true;
-        boolean hasUpper = Pattern.compile("[A-Z]").matcher(password).find();
-        boolean hasLower = Pattern.compile("[a-z]").matcher(password).find();
-        boolean hasDigit = Pattern.compile("[0-9]").matcher(password).find();
-        boolean hasSpecial = Pattern.compile("[^a-zA-Z0-9]").matcher(password).find();
-        if (password.length()<8) length = false;
-        return length && hasUpper && hasLower && hasDigit && hasSpecial;
     }
 
     public boolean getSuccess() {
